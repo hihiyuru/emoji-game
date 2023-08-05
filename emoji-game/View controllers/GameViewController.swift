@@ -2,6 +2,7 @@ import UIKit
 
 class GameViewController: UIViewController {
     
+    // 遊戲問題數據
     var gameDatas: [Question] = [
         Question(topic: ["🐯", "🐯", "🐯", "🐯"], ans: ["虎", "頭", "虎", "腦"]),
         Question(topic: ["👣", "📈", "💨", "🤷‍♂️"], ans: ["趾", "高", "氣", "揚"]),
@@ -24,11 +25,30 @@ class GameViewController: UIViewController {
         Question(topic: ["🐔", "🐕", "🌌", "✨"], ans: ["雞", "犬", "升", "天"]),
         Question(topic: ["🤝", "➕", "🤝", "➕"], ans: ["攜", "手", "並", "肩"]),
     ]
+    
+    // 紀錄玩家已點擊答案的次數
     var clickAnsCount = 0
+    
+    // 紀錄玩家已選擇的答案
     var selectedWords: [String] = []
+    
+    // 當前遊戲關卡數據
     var levelData: Question?
+    
+    // 按鈕的初始位置
     var originalButtonPosition: [CGPoint] = []
-    var winAcount = 0
+    
+    // 紀錄玩家獲勝次數，屬性觀察器會自動更新界面
+    var winAcount = 0 {
+        didSet {
+            winAcountLabel.text = String(winAcount)
+        }
+    }
+    
+    // 判斷遊戲是否結束的計算屬性
+    var isGameOver: Bool {
+        return heartsImageView.isEmpty
+    }
     
     @IBOutlet weak var winAcountLabel: UILabel!
     @IBOutlet var heartsImageView: [UIImageView]!
@@ -43,13 +63,15 @@ class GameViewController: UIViewController {
         setOriginalButtonPosition()
     }
     
+    // 設定按鈕的初始位置
     func setOriginalButtonPosition() {
         for word in wordsButton {
             originalButtonPosition.append(word.frame.origin)
         }
     }
+    
+    // 初始化界面和遊戲數據
     func setUI() {
-        
         setBackground()
         gameOverView.isHidden = true
         titleView.layer.cornerRadius = 5
@@ -57,6 +79,7 @@ class GameViewController: UIViewController {
         updateLevel()
     }
     
+    // 設定背景漸變效果
     func setBackground() {
         let gradientLayer = CAGradientLayer()
         gradientLayer.frame = view.bounds
@@ -67,19 +90,18 @@ class GameViewController: UIViewController {
         view.layer.insertSublayer(gradientLayer, at: 0)
     }
     
+    // 更新遊戲關卡
     func updateLevel() {
-        
         if !gameDatas.isEmpty {
             levelData = gameDatas.removeFirst()
             if let question = levelData {
-                // topicLabel
+                // 更新題目標籤
                 for (index, label) in topicLabel.enumerated() {
                     if index < question.topic.count {
                         label.text = question.topic[index]
                     }
                 }
-                
-                // 更新按鈕
+                // 更新按鈕文字
                 for (index, button) in wordsButton.enumerated() {
                     if index < question.others.count {
                         button.setTitle(question.others[index], for: .normal)
@@ -92,6 +114,7 @@ class GameViewController: UIViewController {
         
     }
     
+    // 初始化界面元素
     func initUI() {
         for (index, word) in wordsButton.enumerated() {
             UIView.animate(withDuration: 0.5) {
@@ -104,6 +127,7 @@ class GameViewController: UIViewController {
         }
     }
     
+    // 按鈕點擊事件
     @IBAction func clickWord(_ sender: UIButton) {
         guard clickAnsCount != 4 else {
             return
@@ -131,6 +155,7 @@ class GameViewController: UIViewController {
             targetX = 94
         }
         
+        // 移動按鈕位置並禁用
         UIView.animate(withDuration: 0.5) {
             sender.frame.origin = CGPoint(x: targetX, y: targetY)
             sender.isEnabled = false
@@ -138,18 +163,19 @@ class GameViewController: UIViewController {
             sender.layer.cornerRadius = 5
             sender.setTitleColor(.darkGray, for: .disabled)
         }
+        
         selectedWords.append(sender.titleLabel?.text ?? "")
         if selectedWords.count == 4 {
             for (index, word) in selectedWords.enumerated() {
                 if word != levelData?.ans[index] {
                     heartsImageView[heartsImageView.count - 1].isHidden = true
                     heartsImageView.removeLast()
-                   
+                    
                     // 延遲一段時間後執行的程式碼
                     DispatchQueue.main.asyncAfter(deadline: .now() + delayInSeconds) { [self] in
                         // 在這裡放置延遲執行的程式碼
-                        if heartsImageView.isEmpty {
-                            gameOverView.isHidden = false
+                        if self.isGameOver {
+                            self.gameOverView.isHidden = false
                         } else {
                             self.initUI()
                             self.updateLevel()
@@ -160,7 +186,6 @@ class GameViewController: UIViewController {
                     break
                 } else if (index == 3) {
                     winAcount += 1
-                    winAcountLabel.text = String(winAcount)
                     DispatchQueue.main.asyncAfter(deadline: .now() + delayInSeconds) { [self] in
                         // 在這裡放置延遲執行的程式碼
                         self.initUI()
@@ -171,6 +196,7 @@ class GameViewController: UIViewController {
         }
     }
     
+    // 顯示結果畫面
     @IBSegueAction func showResult(_ coder: NSCoder) -> resultViewController? {
         let controller = resultViewController(coder: coder)
         controller?.heartsAcount = heartsImageView.count
